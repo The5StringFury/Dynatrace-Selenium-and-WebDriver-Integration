@@ -87,10 +87,8 @@ Selenium 1.0.1 &amp; 2.0b1; dynaTrace v3.5+    </p>
 </tbody>        </table>
             </div>
     </div>
-    
     <div class="section-2"  id="16089385_SeleniumandWebDriverIntegration-InstallationandFirstSteps"  >
         <h2>Installation and First Steps</h2>
-    
 <ul class=" "><li class=" ">    <p>
 Start by reading <strong class=" "><a href="https://community/display/PUB/dynaTrace+in+Continuous+Integration+-+The+Big+Picture">dynaTrace in Continuous Integration - The Big Picture</a></strong> which explains how dynaTrace Integrates in your CI Environment.    </p>
 </li><li class=" ">    <p>
