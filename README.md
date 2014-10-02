@@ -101,7 +101,6 @@ Download the attached <strong class=" "><a href="attachments_45514757_1_Selenium
 If you are using Maven and WebDriver - read the following Guide: <strong class=" "><a href="attachments_93192226_1_MavenWebDriverIntegration.docx">MavenWebDriverIntegration.docx</a></strong>    </p>
     <div class="section-3"  id="16089385_SeleniumandWebDriverIntegration-HelperClasses"  >
         <h3>Helper Classes</h3>
-    
     <p>
 The package contains    </p>
 <ul class=" "><li class=" ">    <p>
