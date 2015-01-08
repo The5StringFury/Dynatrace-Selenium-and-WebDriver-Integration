@@ -1,0 +1,175 @@
+<!-- This Ant script demonstrates a simple CI Scenario with dynaTrace   -->
+<!-- and Selenium.                                                      -->
+<project name="com.dynatrace.demo.selenium" default="runAllTests" basedir=".">
+	<description>dynaTrace sample test script.</description>
+	<property file="./build.properties" />
+
+	<!-- import dynaTrace tasks -->
+	<property name="dtBaseDir" value="${test.home}/lib/dynaTrace" />
+	<import file="${test.home}/lib/dynaTrace/dtTaskDefs.xml" />
+
+	<!-- Prepares the test environment, runs the tests and creates a report -->
+	<target name="runAllTests" depends="cleanReport, dtStartSessionRecording, setHostNameAsServerName">
+		<!-- prepare environment -->
+		<antcall target="dtSetTestInformation" />
+		<antcall target="startSeleniumServer" />
+
+		<!-- run tests -->
+		<antcall target="runTests" />
+
+		<!-- clean up environment -->
+		<antcall target="stopSeleniumServer" />
+
+		<!-- stop recording -->
+		<antcall target="stopDynaTraceSessionRecording" />
+
+		<!-- create test report -->
+		<antcall target="dtReport" />
+		<antcall target="generateHtmlReport" />
+	</target>
+	
+	<!-- retrieves the name of localhost -->
+	<target name="setHostNameAsServerName">
+		<property environment="env"/>
+		<property name="env.HOSTNAME" value="${env.COMPUTERNAME}"/>
+		<echo message="hostname = ${env.HOSTNAME}" />
+	</target>
+
+	<!-- Cleans and compiles all tests -->
+	<target name="cleanAndCompileTests">
+		<delete dir="${test.home}/bin" />
+		<mkdir dir="${test.home}/bin" />
+		<javac srcdir="${test.home}/src" destdir="${test.home}/bin" source="1.6">
+			<classpath>
+				<pathelement location="${junit.jar}" />
+				<pathelement location="${selenium.client.jar}" />
+				<fileset dir="${webservice.jars}">
+					<include name="**/*.jar" />
+				</fileset>
+			</classpath>
+		</javac>
+	</target>
+
+	<!-- Cleans the report directory -->
+	<target name="cleanReport">
+		<delete dir="${test.report}" />
+		<mkdir dir="${test.report}" />
+	</target>
+
+	<!-- Starts session recording on dynaTrace server with dynaTrace Ant integration  -->
+	<!-- Creates a new build number                                                   -->
+	<!-- A property named testrun.session will be set which contains the session name -->
+	<target name="dtStartSessionRecording">
+		<buildnumber />
+		<DtStartRecording username="${dynatrace.server.user}" password="${dynatrace.server.pass}" serverurl="${dynatrace.server.url}" profilename="${dynatrace.profile}" sessionname="${dynatrace.profile}__Build_${build.number}" description="Session recorded during dynaTrace selenium demo for Build ${build.number}" recordingoption="all" sessionnameproperty="testrun.session" appendtimestamp="false" />
+		<echo message="dynaTrace server is now recording session: ${testrun.session}" />
+	</target>
+
+	<!-- Stops session recording on dynaTrace server with dynaTrace Ant integration -->
+	<target name="stopDynaTraceSessionRecording">
+		<DtStopRecording username="${dynatrace.server.user}" password="${dynatrace.server.pass}" serverurl="${dynatrace.server.url}" profilename="${dynatrace.profile}" />
+	</target>
+
+	<!-- Sends meta data about the test to the dynaTrace server via REST interface -->
+	<target name="dtSetTestInformation">
+		<DtSetTestInformation username="${dynatrace.server.user}" password="${dynatrace.server.pass}" serverurl="${dynatrace.server.url}" profilename="${dynatrace.profile}" marker="marker1" versionMajor="${test.metadata.major}" versionminor="${test.metadata.minor}" versionrevision="${test.metadata.revision}" versionbuild="${build.number}">
+			<customproperty key="testset" value="all tests" />
+		</DtSetTestInformation>
+	</target>
+
+	<!-- Use dynaTraceReport Ant task to export a dashlet with browser metrics -->
+	<target name="dtReport">
+		<!-- Generate the report -->
+		<DtReport username="${dynatrace.server.user}" password="${dynatrace.server.pass}" serverurl="${dynatrace.server.url}" dashboardname="${dynatrace.dashboard}" createhtml="false" xmltofile="${dynatrace.report}" source="stored:${testrun.session}" />
+	</target>
+
+	<!-- Runs all tests -->
+	<target name="runTests">
+		<!-- First run Selenium Tests                -->
+		<!-- * All tests that end with *SeleniumTest -->
+		<junit fork="true" haltonerror="false" haltonfailure="false" printsummary="yes">
+			<formatter type="xml" />
+			<classpath>
+				<pathelement location="${junit.jar}" />
+				<pathelement location="${selenium.client.jar}" />
+				<fileset dir="${webservice.jars}">
+					<include name="**/*.jar" />
+				</fileset>
+				<pathelement location="${test.home}/bin" />
+			</classpath>
+			<jvmarg value="-DtestRunId=${testrun.session}" />
+			<batchtest todir="${test.report}" haltonerror="false" haltonfailure="false">
+				<fileset dir="${test.home}/bin">
+					<include name="com/dynatrace/demo/**/*SeleniumTest.class" />
+				</fileset>
+			</batchtest>
+		</junit>
+
+		<!-- Then run JUnit Tests                 -->
+		<!-- * All tests that end with *JUnitTest -->
+		<junit fork="true" haltonerror="false" haltonfailure="false" printsummary="yes">
+			<formatter type="xml" />
+			<classpath>
+				<pathelement location="${junit.jar}" />
+				<pathelement location="${selenium.client.jar}" />
+				<fileset dir="${webservice.jars}">
+					<include name="**/*.jar" />
+				</fileset>
+				<pathelement location="${test.home}/bin" />
+			</classpath>
+			<jvmarg value="-agentpath:${dynatrace.home}/agent/lib/dtagent.dll=name=${dynatrace.agent.name.junit},server=${dynatrace.server.collector}" />
+			<jvmarg value="-DtestRunId=${testrun.session}" />
+			<batchtest todir="${test.report}" haltonerror="false" haltonfailure="false">
+				<fileset dir="${test.home}/bin">
+					<include name="com/dynatrace/demo/**/*JUnitTest.class" />
+				</fileset>
+			</batchtest>
+		</junit>
+	</target>
+
+	<!-- Generate a html report from JUnit xml results and dynaTrace xml report -->
+	<target name="generateHtmlReport">
+		<property environment="env"/>
+		<property name="servername" value="${env.HOSTNAME}" />
+		<!-- if server is different to localhost, use the following servername -->
+		<!-- <property name="servername" value="${dynatrace.server.name}" /> -->
+		<property name="dynatrace.report.absolute" location="${dynatrace.report}" />
+		<junitreport todir="${test.report}">
+			<fileset dir="${test.report}">
+				<include name="TEST-*.xml" />
+			</fileset>
+			<report todir="${test.report}" format="frames" styledir="${test.report.xsl}">
+				<param name="dtReport" expression="${dynatrace.report.absolute}" />
+				<param name="dtSessionName" expression="${testrun.session}" />
+				<param name="dtServerUrl" expression="${dynatrace.server.url}" />
+				<param name="dtServerName" expression="${servername}" />
+				<param name="TITLE" expression="GoSpace Tests powered by dynaTrace" />
+			</report>
+		</junitreport>
+	</target>
+
+	<!--Launch Selenium-Server in new VM and pass dynaTrace environment variables to enable ieagent -->
+	<target name="startSeleniumServer">
+		<java jar="${selenium.server.jar}" fork="true" spawn="true">
+			<!-- Selenium server will be launching IE, therefore we need to set environment variables to -->
+			<!-- enable the IE agent here. The IE process will inherit them.                             -->
+			<env key="DT_AGENTACTIVE" value="true" />
+			<env key="DT_AGENTNAME" value="${dynatrace.agent.name.browser}" />
+			<env key="DT_SERVER" value="${dynatrace.server.collector}" />
+			<!-- Proxy Injection Mode is required in order to use the addCustomRequestHeader() method -->
+			<arg line="-proxyInjectionMode" />
+		</java>
+		<!-- Wait until Selenium server is running -->
+		<waitfor maxwait="30" maxwaitunit="second">
+			<and>
+				<socket server="localhost" port="4444" />
+				<http url="http://localhost:4444/selenium-server/index.html" />
+			</and>
+		</waitfor>
+	</target>
+
+	<!--Stop Selenium-Server -->
+	<target name="stopSeleniumServer">
+		<get src="http://localhost:4444/selenium-server/driver/?cmd=shutDownSeleniumServer" ignoreerrors="true" dest="${test.report}/selenium.shutdown.result" />
+	</target>
+</project>
