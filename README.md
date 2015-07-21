@@ -8,5 +8,5 @@ record/replay as well as the scripting option - makes it a great tool for functi
 Selenium also offers writing the test scripts as JUnit tests. With a special dynaTrace JUnit Runner and an extension to the Selenium base functionality it is now possible to tag web requests that are
 executed by a Selenium Java Test.
 
-Find further information in the [dynaTrace community](https://community.compuwareapm.com/community/display/DL/Selenium+and+WebDriver+Integration) 
+Find further information in the [dynaTrace community](https://community.dynatrace.com/community/display/DL/Selenium+and+WebDriver+Integration) 
 
